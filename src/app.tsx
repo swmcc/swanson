@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
-import { Box, Text, useApp, useInput } from 'ink';
+import React, { useState, useEffect } from 'react';
+import { useApp, useInput } from 'ink';
 import { Splash } from './components/Splash.js';
 import { ProjectList } from './components/ProjectList.js';
+import { ProjectView } from './components/ProjectView.js';
+import { processManager } from './lib/process.js';
 
 type Screen = 'splash' | 'list' | 'project';
 
@@ -16,6 +18,7 @@ const PROJECTS = [
   { name: 'swm.cc', path: '/Users/swm/Code/swm.cc', running: 0, total: 1 },
   { name: 'jotter', path: '/Users/swm/Code/jotter', running: 0, total: 2 },
   { name: 'the-mcculloughs.org', path: '/Users/swm/Code/the-mcculloughs.org', running: 0, total: 1 },
+  { name: 'swanson', path: '/Users/swm/Code/swanson', running: 0, total: 4 },
 ];
 
 interface Project {
@@ -30,13 +33,16 @@ export const App: React.FC = () => {
   const [screen, setScreen] = useState<Screen>('splash');
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
 
+  // Cleanup on exit
+  useEffect(() => {
+    return () => {
+      processManager.stopAll();
+    };
+  }, []);
+
   useInput((input, key) => {
-    if (input === 'q' && screen !== 'splash') {
-      exit();
-    }
-    if (key.escape && screen === 'project') {
-      setScreen('list');
-      setSelectedProject(null);
+    if (input === 'q' && screen === 'list') {
+      processManager.stopAll().then(() => exit());
     }
   });
 
@@ -49,6 +55,11 @@ export const App: React.FC = () => {
     setScreen('project');
   };
 
+  const handleBack = () => {
+    setScreen('list');
+    setSelectedProject(null);
+  };
+
   if (screen === 'splash') {
     return <Splash onComplete={handleSplashComplete} projectCount={PROJECTS.length} />;
   }
@@ -57,29 +68,11 @@ export const App: React.FC = () => {
     return <ProjectList projects={PROJECTS} onSelect={handleProjectSelect} />;
   }
 
-  // Project detail view (placeholder for now)
-  return (
-    <Box flexDirection="column" padding={1}>
-      <Box marginBottom={1}>
-        <Text bold color="cyan">SWANSON</Text>
-        <Text color="gray"> › </Text>
-        <Text bold color="white">{selectedProject?.name}</Text>
-        <Text color="gray">  [ESC] Back</Text>
-      </Box>
+  if (screen === 'project' && selectedProject) {
+    return <ProjectView project={selectedProject} onBack={handleBack} />;
+  }
 
-      <Box marginBottom={1}>
-        <Text color="gray">{'─'.repeat(50)}</Text>
-      </Box>
-
-      <Box>
-        <Text color="yellow">Project view coming next...</Text>
-      </Box>
-
-      <Box marginTop={1}>
-        <Text color="gray">Path: {selectedProject?.path}</Text>
-      </Box>
-    </Box>
-  );
+  return null;
 };
 
 export default App;
