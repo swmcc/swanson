@@ -1,13 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Box, Text, useInput } from 'ink';
 import { useTerminalSize } from '../hooks/useTerminalSize.js';
-
-interface Project {
-  name: string;
-  path: string;
-  running: number;
-  total: number;
-}
+import type { Project } from '../app.js';
 
 interface ProjectListProps {
   projects: Project[];
@@ -26,26 +20,42 @@ const ProjectCard: React.FC<{
     ? `${project.running} running`
     : 'stopped';
 
+  // Use project's accent color for border when selected
+  const borderColor = isSelected ? project.color : 'gray';
+
   return (
     <Box
       flexDirection="column"
       width={width}
       borderStyle={isSelected ? 'double' : 'single'}
-      borderColor={isSelected ? 'cyan' : 'gray'}
+      borderColor={borderColor}
       paddingX={1}
       paddingY={0}
     >
+      {/* Icon and name row */}
       <Box>
-        <Text color={isSelected ? 'cyan' : 'white'} bold>
-          {project.name.length > width - 4
-            ? project.name.slice(0, width - 7) + '...'
+        <Text>{project.icon} </Text>
+        <Text color={isSelected ? project.color : 'white'} bold>
+          {project.name.length > width - 6
+            ? project.name.slice(0, width - 9) + '...'
             : project.name}
         </Text>
       </Box>
-      <Box marginTop={0}>
+      {/* Status row */}
+      <Box>
         <Text color={statusColor}>{statusIcon} </Text>
         <Text color="gray">{serviceText}</Text>
       </Box>
+      {/* Description row (if space) */}
+      {project.description && (
+        <Box>
+          <Text color="gray" dimColor>
+            {project.description.length > width - 4
+              ? project.description.slice(0, width - 7) + '...'
+              : project.description}
+          </Text>
+        </Box>
+      )}
     </Box>
   );
 };
@@ -54,8 +64,8 @@ const ProjectCard: React.FC<{
 const ProjectRow: React.FC<{
   project: Project;
   isSelected: boolean;
-  showPath: boolean;
-}> = ({ project, isSelected, showPath }) => {
+  showDescription: boolean;
+}> = ({ project, isSelected, showDescription }) => {
   const statusIcon = project.running > 0 ? '●' : '○';
   const statusColor = project.running > 0 ? 'green' : 'gray';
   const serviceText = project.running > 0
@@ -64,16 +74,17 @@ const ProjectRow: React.FC<{
 
   return (
     <Box>
-      <Text color={isSelected ? 'cyan' : 'white'}>
+      <Text color={isSelected ? project.color : 'white'}>
         {isSelected ? '❯ ' : '  '}
       </Text>
-      <Text color={isSelected ? 'cyan' : 'white'} bold={isSelected}>
-        {project.name.padEnd(25)}
+      <Text>{project.icon} </Text>
+      <Text color={isSelected ? project.color : 'white'} bold={isSelected}>
+        {project.name.padEnd(22)}
       </Text>
       <Text color={statusColor}>{statusIcon} </Text>
-      <Text color="gray">{serviceText.padEnd(15)}</Text>
-      {showPath && (
-        <Text color="gray" dimColor> {project.path}</Text>
+      <Text color="gray">{serviceText.padEnd(12)}</Text>
+      {showDescription && project.description && (
+        <Text color="gray" dimColor> {project.description}</Text>
       )}
     </Box>
   );
@@ -94,8 +105,8 @@ export const ProjectList: React.FC<ProjectListProps> = ({ projects, onSelect }) 
     setSelectedIndex(0);
   }, [filter]);
 
-  // Grid layout calculations
-  const cardWidth = 24;
+  // Grid layout calculations - wider cards to fit icon + description
+  const cardWidth = 26;
   const cardGap = 2;
   const availableWidth = columns - 6; // padding
   const cardsPerRow = Math.floor(availableWidth / (cardWidth + cardGap));
@@ -174,10 +185,10 @@ export const ProjectList: React.FC<ProjectListProps> = ({ projects, onSelect }) 
       {/* Header */}
       <Box marginBottom={isLarge ? 2 : 1} justifyContent="space-between">
         <Box>
-          <Text bold color="cyan">SWANSON</Text>
+          <Text bold color="cyan">🥩 SWANSON</Text>
           <Text color="gray"> │ </Text>
           <Text color="white">{filteredProjects.length} projects</Text>
-          {useGridView && <Text color="gray" dimColor>  [grid view]</Text>}
+          {useGridView && <Text color="gray" dimColor>  [grid]</Text>}
         </Box>
         <Text color="gray">{new Date().toLocaleTimeString()}</Text>
       </Box>
@@ -225,7 +236,7 @@ export const ProjectList: React.FC<ProjectListProps> = ({ projects, onSelect }) 
               key={project.name}
               project={project}
               isSelected={index === selectedIndex}
-              showPath={isWide}
+              showDescription={isWide}
             />
           ))}
         </Box>

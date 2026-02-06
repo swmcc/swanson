@@ -4,29 +4,21 @@ import { Splash } from './components/Splash.js';
 import { ProjectList } from './components/ProjectList.js';
 import { ProjectView } from './components/ProjectView.js';
 import { processManager } from './lib/process.js';
+import { PROJECTS, ProjectConfig } from './lib/projects.js';
 
 type Screen = 'splash' | 'list' | 'project';
 
-// Your projects from CLAUDE.md
-const PROJECTS = [
-  { name: 'funeralsni', path: '/Users/swm/Code/funeralsni', running: 0, total: 3 },
-  { name: 'whatisonthe.tv', path: '/Users/swm/Code/whatisonthe.tv', running: 0, total: 2 },
-  { name: 'second_breakfast', path: '/Users/swm/Code/second_breakfast', running: 0, total: 2 },
-  { name: 'skillfulgorilla.com', path: '/Users/swm/Code/skillfulgorilla.com', running: 0, total: 2 },
-  { name: 'theonlystephen.com', path: '/Users/swm/Code/theonlystephen.com', running: 0, total: 1 },
-  { name: 'bmk', path: '/Users/swm/Code/bmk', running: 0, total: 2 },
-  { name: 'swm.cc', path: '/Users/swm/Code/swm.cc', running: 0, total: 1 },
-  { name: 'jotter', path: '/Users/swm/Code/jotter', running: 0, total: 2 },
-  { name: 'the-mcculloughs.org', path: '/Users/swm/Code/the-mcculloughs.org', running: 0, total: 1 },
-  { name: 'swanson', path: '/Users/swm/Code/swanson', running: 0, total: 4 },
-];
-
-interface Project {
-  name: string;
-  path: string;
+export interface Project extends ProjectConfig {
   running: number;
   total: number;
 }
+
+// Extend project configs with runtime state
+const projectsWithState: Project[] = PROJECTS.map(p => ({
+  ...p,
+  running: 0,
+  total: 0,
+}));
 
 export const App: React.FC = () => {
   const { exit } = useApp();
@@ -61,11 +53,11 @@ export const App: React.FC = () => {
   };
 
   if (screen === 'splash') {
-    return <Splash onComplete={handleSplashComplete} projectCount={PROJECTS.length} />;
+    return <Splash onComplete={handleSplashComplete} projectCount={projectsWithState.length} />;
   }
 
   if (screen === 'list') {
-    return <ProjectList projects={PROJECTS} onSelect={handleProjectSelect} />;
+    return <ProjectList projects={projectsWithState} onSelect={handleProjectSelect} />;
   }
 
   if (screen === 'project' && selectedProject) {

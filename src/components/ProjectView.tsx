@@ -5,11 +5,7 @@ import { parseMakefile, getTargetDisplayName, MakeTarget } from '../lib/makefile
 import { processManager, ServiceProcess } from '../lib/process.js';
 import { getGitStatus, GitStatus } from '../lib/git.js';
 import { useTerminalSize } from '../hooks/useTerminalSize.js';
-
-interface Project {
-  name: string;
-  path: string;
-}
+import type { Project } from '../app.js';
 
 interface ProjectViewProps {
   project: Project;
@@ -258,10 +254,12 @@ export const ProjectView: React.FC<ProjectViewProps> = ({ project, onBack }) => 
       {/* Header */}
       <Box marginBottom={1} justifyContent="space-between">
         <Box>
-          <Text bold color="cyan">SWANSON</Text>
+          <Text bold color="cyan">🥩 SWANSON</Text>
           <Text color="gray"> › </Text>
-          <Text bold color="white">{project.name}</Text>
-          {useSplitView && <Text color="gray" dimColor>  [split view]</Text>}
+          <Text>{project.icon} </Text>
+          <Text bold color={project.color}>{project.name}</Text>
+          {project.description && <Text color="gray" dimColor>  {project.description}</Text>}
+          {useSplitView && <Text color="gray" dimColor>  [split]</Text>}
         </Box>
         <Text color="gray">[ESC] Back</Text>
       </Box>
