@@ -14,11 +14,7 @@ const ProjectCard: React.FC<{
   isSelected: boolean;
   width: number;
 }> = ({ project, isSelected, width }) => {
-  const statusIcon = project.running > 0 ? '●' : '○';
-  const statusColor = project.running > 0 ? 'green' : 'gray';
-  const serviceText = project.running > 0
-    ? `${project.running} running`
-    : 'stopped';
+  const isRunning = project.running > 0;
 
   // Use project's accent color for border when selected
   const borderColor = isSelected ? project.color : 'gray';
@@ -41,13 +37,12 @@ const ProjectCard: React.FC<{
             : project.name}
         </Text>
       </Box>
-      {/* Status row */}
-      <Box>
-        <Text color={statusColor}>{statusIcon} </Text>
-        <Text color="gray">{serviceText}</Text>
-      </Box>
-      {/* Description row (if space) */}
-      {project.description && (
+      {/* Running indicator OR description */}
+      {isRunning ? (
+        <Box>
+          <Text color="green">● running</Text>
+        </Box>
+      ) : project.description ? (
         <Box>
           <Text color="gray" dimColor>
             {project.description.length > width - 4
@@ -55,7 +50,7 @@ const ProjectCard: React.FC<{
               : project.description}
           </Text>
         </Box>
-      )}
+      ) : null}
     </Box>
   );
 };
@@ -66,11 +61,7 @@ const ProjectRow: React.FC<{
   isSelected: boolean;
   showDescription: boolean;
 }> = ({ project, isSelected, showDescription }) => {
-  const statusIcon = project.running > 0 ? '●' : '○';
-  const statusColor = project.running > 0 ? 'green' : 'gray';
-  const serviceText = project.running > 0
-    ? `${project.running} service${project.running > 1 ? 's' : ''}`
-    : 'stopped';
+  const isRunning = project.running > 0;
 
   return (
     <Box>
@@ -81,11 +72,11 @@ const ProjectRow: React.FC<{
       <Text color={isSelected ? project.color : 'white'} bold={isSelected}>
         {project.name.padEnd(22)}
       </Text>
-      <Text color={statusColor}>{statusIcon} </Text>
-      <Text color="gray">{serviceText.padEnd(12)}</Text>
-      {showDescription && project.description && (
-        <Text color="gray" dimColor> {project.description}</Text>
-      )}
+      {isRunning ? (
+        <Text color="green">● running</Text>
+      ) : showDescription && project.description ? (
+        <Text color="gray" dimColor>{project.description}</Text>
+      ) : null}
     </Box>
   );
 };
