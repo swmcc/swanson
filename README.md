@@ -1,16 +1,52 @@
 # Swanson
 
+```
+                          ████████████████
+                      ████░░░░░░░░░░░░░░░░████
+                    ██░░░░░░░░░░░░░░░░░░░░░░░░██
+                  ██░░░░░░░░░░░░░░░░░░░░░░░░░░░░██
+                ██░░░░░░░░████████████████░░░░░░░░██
+              ██░░░░░░████████████████████████░░░░░░██
+              ██░░░░██████████████████████████████░░██
+            ██░░░░████████████████████████████████░░░░██
+            ██░░████  ████████████████████████  ████░░██
+            ██░░██      ████████████████████      ██░░██
+            ██░░██  ▓▓  ██████████████████  ▓▓    ██░░██
+            ██░░██      ██████████████████        ██░░██
+            ██░░████████████████████████████████████░░██
+            ██░░██████████████    ████████████████████░░██
+            ██░░░░████████████    ████████████████░░░░██
+              ██░░░░██████████████████████████████░░░░██
+              ██░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░██
+              ██░░██████████████████████████████████░░██
+              ██░░██▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓██░░██
+                ██░░██▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓██░░██
+                  ██░░██████████████████████████░░██
+                    ████░░░░░░░░░░░░░░░░░░░░░░████
+                        ████████████████████
+```
+
 > "Give me all the services you have."
 
-A no-nonsense TUI for managing local development services. Built with React and Ink.
+A no-nonsense TUI for managing local development projects. Built with React and Ink.
+
+## Screenshots
+
+### Splash Screen
+![Swanson Splash](assets/swanson_title.png)
+
+### Project Grid
+![Swanson Projects](assets/swanson_projects.png)
 
 ## Features
 
 - **Quick launcher** - Fuzzy search across all your projects
-- **Service management** - Start/stop dev servers, databases, workers
-- **Log viewer** - Tail logs from running services
-- **Git integration** - Status, pull, branch operations
+- **Project dashboard** - Make targets, GitHub issues, and PRs at a glance
+- **Log viewer** - Stream output from running commands
+- **Git integration** - Status display + lazygit launcher
+- **GitHub integration** - View issues and PRs, open in browser
 - **Makefile detection** - Auto-discovers `local.*` targets
+- **Responsive layout** - Grid view on large terminals, list view on small
 
 ## Installation
 
@@ -28,30 +64,42 @@ swanson
 
 ## Usage
 
-```
-┌─────────────────────────────────────────────────────────────────────┐
-│                                                                     │
-│  ███████╗██╗    ██╗ █████╗ ███╗   ██╗███████╗ ██████╗ ███╗   ██╗   │
-│  ██╔════╝██║    ██║██╔══██╗████╗  ██║██╔════╝██╔═══██╗████╗  ██║   │
-│  ███████╗██║ █╗ ██║███████║██╔██╗ ██║███████╗██║   ██║██╔██╗ ██║   │
-│  ╚════██║██║███╗██║██╔══██║██║╚██╗██║╚════██║██║   ██║██║╚██╗██║   │
-│  ███████║╚███╔███╔╝██║  ██║██║ ╚████║███████║╚██████╔╝██║ ╚████║   │
-│  ╚══════╝ ╚══╝╚══╝ ╚═╝  ╚═╝╚═╝  ╚═══╝╚══════╝ ╚═════╝ ╚═╝  ╚═══╝   │
-│                                                                     │
-│                  Give me all the services you have.                 │
-│                                                                     │
-└─────────────────────────────────────────────────────────────────────┘
-```
-
 ### Keyboard Shortcuts
 
+#### Project List
 | Key | Action |
 |-----|--------|
-| `↑` `↓` | Navigate |
+| `↑` `↓` `←` `→` | Navigate (grid mode) |
+| `↑` `↓` | Navigate (list mode) |
 | `⏎` | Select project |
 | `/` | Search |
-| `Esc` | Back / Cancel |
 | `q` | Quit |
+
+#### Project Dashboard
+| Key | Action |
+|-----|--------|
+| `↑` `↓` | Select make target |
+| `⏎` | Run selected target |
+| `r` | Run selected target |
+| `i` | Open issues in browser |
+| `p` | Open PRs in browser |
+| `g` | Launch lazygit |
+| `Esc` | Back to project list |
+| `q` | Quit |
+
+#### Log Viewer
+| Key | Action |
+|-----|--------|
+| `q` / `Esc` | Stop process and exit |
+
+## Prerequisites
+
+Swanson checks for these tools at startup:
+
+- **git** - Required for repository status
+- **gh** - GitHub CLI for issues/PRs
+- **lazygit** - Terminal UI for git (optional but recommended)
+- **make** - For running Makefile targets
 
 ## Makefile Targets
 
@@ -69,7 +117,9 @@ swanson
 ```
 swanson/
 ├── assets/
-│   └── swanson.png
+│   ├── swanson.png
+│   ├── swanson_title.png
+│   └── swanson_projects.png
 ├── bin/
 │   └── swanson.js
 ├── src/
@@ -78,17 +128,19 @@ swanson/
 │   ├── components/
 │   │   ├── Splash.tsx
 │   │   ├── ProjectList.tsx
-│   │   ├── ProjectView.tsx
-│   │   ├── LogViewer.tsx
-│   │   └── GitPanel.tsx
+│   │   ├── ProjectDashboard.tsx
+│   │   ├── IssuesBrowser.tsx
+│   │   └── LogViewer.tsx
 │   ├── hooks/
-│   │   ├── useProjects.ts
-│   │   ├── useServices.ts
-│   │   └── useGit.ts
+│   │   └── useTerminalSize.ts
 │   └── lib/
+│       ├── github.ts
+│       ├── git.ts
+│       ├── lazygit.ts
 │       ├── makefile.ts
+│       ├── prerequisites.ts
 │       ├── process.ts
-│       └── config.ts
+│       └── projects.ts
 ├── Makefile
 ├── package.json
 └── tsconfig.json
@@ -99,7 +151,7 @@ swanson/
 - **React** - UI components
 - **Ink** - React renderer for CLI
 - **TypeScript** - Type safety
-- **Zustand** - State management
+- **GitHub CLI** - Issues and PR integration
 
 ## License
 
