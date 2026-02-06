@@ -1,8 +1,12 @@
-.PHONY: local.dev local.build local.install local.clean local.link local.test
+.PHONY: local.dev local.mcp local.build local.install local.clean local.link local.test
 
 # Run the TUI in development mode
 local.dev:
 	npm run dev
+
+# Run the MCP server in development mode
+local.mcp:
+	npm run dev:mcp
 
 # Build TypeScript to dist/
 local.build:
