@@ -3,6 +3,7 @@ import { Box, Text } from 'ink';
 import Gradient from 'ink-gradient';
 import Spinner from 'ink-spinner';
 import { useTerminalSize } from '../hooks/useTerminalSize.js';
+import { checkPrerequisites, PrerequisiteCheck } from '../lib/prerequisites.js';
 
 const SWANSON_LOGO = `
 ███████╗██╗    ██╗ █████╗ ███╗   ██╗███████╗ ██████╗ ███╗   ██╗
@@ -22,28 +23,42 @@ interface SplashProps {
 export const Splash: React.FC<SplashProps> = ({ onComplete, projectCount = 9 }) => {
   const { columns, rows, isLarge, isTall } = useTerminalSize();
   const [progress, setProgress] = useState(0);
-  const [phase, setPhase] = useState<'logo' | 'loading' | 'ready'>('logo');
+  const [phase, setPhase] = useState<'logo' | 'checking' | 'ready' | 'error'>('logo');
   const [loadingText, setLoadingText] = useState('Initializing');
+  const [prerequisites, setPrerequisites] = useState<PrerequisiteCheck[]>([]);
+  const [hasErrors, setHasErrors] = useState(false);
 
   const loadingSteps = [
     'Initializing',
+    'Checking prerequisites',
     'Scanning projects',
     'Detecting services',
-    'Checking Makefiles',
     'Ready',
   ];
 
   useEffect(() => {
     const logoTimer = setTimeout(() => {
-      setPhase('loading');
+      setPhase('checking');
     }, 800);
 
     return () => clearTimeout(logoTimer);
   }, []);
 
   useEffect(() => {
-    if (phase !== 'loading') return;
+    if (phase !== 'checking') return;
 
+    // Check prerequisites
+    const checks = checkPrerequisites();
+    setPrerequisites(checks);
+
+    const missingRequired = checks.filter(c => c.required && !c.installed);
+    if (missingRequired.length > 0) {
+      setHasErrors(true);
+      setPhase('error');
+      return;
+    }
+
+    // Continue with loading animation
     const interval = setInterval(() => {
       setProgress((prev) => {
         const next = prev + Math.random() * 15 + 5;
@@ -67,13 +82,11 @@ export const Splash: React.FC<SplashProps> = ({ onComplete, projectCount = 9 }) 
     return () => clearInterval(interval);
   }, [phase, onComplete]);
 
-  // Responsive progress bar - wider on larger terminals
   const progressBarWidth = isLarge ? 60 : 40;
   const filledWidth = Math.floor((progress / 100) * progressBarWidth);
   const progressBar = '█'.repeat(filledWidth) + '░'.repeat(progressBarWidth - filledWidth);
 
-  // Calculate vertical centering for large terminals
-  const contentHeight = 15; // Approximate height of splash content
+  const contentHeight = 15;
   const topPadding = isTall ? Math.floor((rows - contentHeight) / 2) : 1;
 
   return (
@@ -98,7 +111,7 @@ export const Splash: React.FC<SplashProps> = ({ onComplete, projectCount = 9 }) 
       </Box>
 
       {/* Loading section */}
-      {phase === 'loading' && (
+      {phase === 'checking' && (
         <Box flexDirection="column" alignItems="center" marginTop={isLarge ? 3 : 1}>
           <Box>
             <Text color="yellow">
@@ -122,14 +135,47 @@ export const Splash: React.FC<SplashProps> = ({ onComplete, projectCount = 9 }) 
       {phase === 'ready' && (
         <Box flexDirection="column" alignItems="center" marginTop={isLarge ? 3 : 1}>
           <Text color="green" bold>✓ Ready</Text>
-          <Box marginTop={isLarge ? 2 : 1}>
+          <Box marginTop={isLarge ? 2 : 1} flexDirection="column" alignItems="center">
             <Text color="gray">{projectCount} projects loaded</Text>
+            <Box marginTop={1} gap={2}>
+              {prerequisites.filter(p => p.installed).map(p => (
+                <Text key={p.name} color="green" dimColor>✓ {p.name}</Text>
+              ))}
+            </Box>
           </Box>
         </Box>
       )}
 
-      {/* Terminal size indicator (debug - remove later) */}
-      {isLarge && (
+      {/* Error state - missing prerequisites */}
+      {phase === 'error' && (
+        <Box flexDirection="column" alignItems="center" marginTop={isLarge ? 3 : 1}>
+          <Text color="red" bold>✕ Missing Prerequisites</Text>
+          <Box marginTop={2} flexDirection="column" gap={1}>
+            {prerequisites.map(p => (
+              <Box key={p.name} gap={2}>
+                <Text color={p.installed ? 'green' : 'red'}>
+                  {p.installed ? '✓' : '✕'}
+                </Text>
+                <Text color={p.installed ? 'white' : 'red'} bold={!p.installed}>
+                  {p.name}
+                </Text>
+                {p.installed && p.version && (
+                  <Text color="gray" dimColor>v{p.version}</Text>
+                )}
+                {!p.installed && p.installHint && (
+                  <Text color="yellow">{p.installHint}</Text>
+                )}
+              </Box>
+            ))}
+          </Box>
+          <Box marginTop={2}>
+            <Text color="gray">Install missing tools and restart Swanson</Text>
+          </Box>
+        </Box>
+      )}
+
+      {/* Terminal size indicator */}
+      {isLarge && phase !== 'error' && (
         <Box position="absolute" marginTop={rows - 2}>
           <Text color="gray" dimColor>{columns}×{rows}</Text>
         </Box>
