@@ -25,6 +25,7 @@ A no-nonsense TUI for managing local development projects. Built with React and 
 - **GitHub integration** - View issues and PRs, open in browser
 - **Makefile detection** - Auto-discovers `local.*` targets
 - **Responsive layout** - Grid view on large terminals, list view on small
+- **MCP Server** - Control Swanson from Claude Code via natural language
 
 ## Installation
 
@@ -88,7 +89,45 @@ Swanson checks for these tools at startup:
 | `make local.install` | Install npm dependencies |
 | `make local.clean` | Remove dist/ and node_modules/ |
 | `make local.link` | Build and link globally |
+| `make local.mcp` | Run MCP server in development mode |
 | `make local.test` | Run tests |
+
+## Claude Code Integration (MCP)
+
+Swanson includes an MCP server for Claude Code integration. This lets you manage projects through natural conversation:
+
+```
+You: "Start the dev server for funeralsni"
+You: "Show me the logs"
+You: "What GitHub issues are open?"
+You: "Stop all running processes"
+```
+
+### Setup
+
+```bash
+# Build and link
+make local.link
+
+# Register with Claude Code
+claude mcp add --transport stdio swanson -- swanson-mcp
+
+# Restart Claude Code
+```
+
+### Available Tools
+
+| Tool | Description |
+|------|-------------|
+| `swanson_list_projects` | List all projects |
+| `swanson_start_process` | Start a make target |
+| `swanson_stop_process` | Stop a process |
+| `swanson_get_logs` | Get process logs |
+| `swanson_gh_issues` | List GitHub issues |
+| `swanson_gh_prs` | List pull requests |
+| `swanson_git_status` | Get git status |
+
+See [docs/MCP_SERVER.md](docs/MCP_SERVER.md) for full documentation.
 
 ## Project Structure
 
@@ -100,6 +139,8 @@ swanson/
 │   └── swanson_projects.png
 ├── bin/
 │   └── swanson.js
+├── docs/
+│   └── MCP_SERVER.md
 ├── src/
 │   ├── index.tsx
 │   ├── app.tsx
@@ -111,14 +152,22 @@ swanson/
 │   │   └── LogViewer.tsx
 │   ├── hooks/
 │   │   └── useTerminalSize.ts
-│   └── lib/
-│       ├── github.ts
-│       ├── git.ts
-│       ├── lazygit.ts
-│       ├── makefile.ts
-│       ├── prerequisites.ts
-│       ├── process.ts
-│       └── projects.ts
+│   ├── lib/
+│   │   ├── github.ts
+│   │   ├── git.ts
+│   │   ├── lazygit.ts
+│   │   ├── makefile.ts
+│   │   ├── prerequisites.ts
+│   │   ├── process.ts
+│   │   └── projects.ts
+│   └── mcp/
+│       ├── index.ts
+│       ├── server.ts
+│       └── tools/
+│           ├── projects.ts
+│           ├── process.ts
+│           ├── github.ts
+│           └── git.ts
 ├── Makefile
 ├── package.json
 └── tsconfig.json
