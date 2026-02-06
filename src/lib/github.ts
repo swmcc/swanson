@@ -1,4 +1,4 @@
-import { exec } from 'child_process';
+import { exec, spawn } from 'child_process';
 import { promisify } from 'util';
 
 const execAsync = promisify(exec);
@@ -334,28 +334,53 @@ export class GitHub {
    * Open issue in browser
    */
   async openInBrowser(issueNumber: number): Promise<GitHubResult<void>> {
-    try {
-      await execAsync(
-        `gh issue view ${issueNumber} --web`,
-        { cwd: this.cwd }
-      );
+    return new Promise((resolve) => {
+      const proc = spawn('gh', ['issue', 'view', String(issueNumber), '--web'], {
+        cwd: this.cwd,
+        detached: true,
+        stdio: 'ignore',
+      });
 
-      return { success: true, data: undefined };
-    } catch (error) {
-      return this.handleError(error);
-    }
+      proc.unref(); // Allow parent to exit independently
+
+      proc.on('error', (err) => {
+        resolve({
+          success: false,
+          error: { type: 'unknown', message: err.message }
+        });
+      });
+
+      // Don't wait for it to close, browser will open async
+      setTimeout(() => {
+        resolve({ success: true, data: undefined });
+      }, 100);
+    });
   }
 
   /**
    * Open repo in browser
    */
   async openRepoInBrowser(): Promise<GitHubResult<void>> {
-    try {
-      await execAsync('gh repo view --web', { cwd: this.cwd });
-      return { success: true, data: undefined };
-    } catch (error) {
-      return this.handleError(error);
-    }
+    return new Promise((resolve) => {
+      const proc = spawn('gh', ['repo', 'view', '--web'], {
+        cwd: this.cwd,
+        detached: true,
+        stdio: 'ignore',
+      });
+
+      proc.unref();
+
+      proc.on('error', (err) => {
+        resolve({
+          success: false,
+          error: { type: 'unknown', message: err.message }
+        });
+      });
+
+      setTimeout(() => {
+        resolve({ success: true, data: undefined });
+      }, 100);
+    });
   }
 
   /**
