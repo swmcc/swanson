@@ -3,7 +3,7 @@ import { Box, Text, useInput, useApp } from 'ink';
 import Spinner from 'ink-spinner';
 import { parseMakefile, getTargetDisplayName, MakeTarget } from '../lib/makefile.js';
 import { getGitStatus, GitStatus } from '../lib/git.js';
-import { GitHub, GitHubIssue } from '../lib/github.js';
+import { GitHub, GitHubIssue, GitHubPR } from '../lib/github.js';
 import { launchLazyGit, isLazyGitInstalled } from '../lib/lazygit.js';
 import { useTerminalSize } from '../hooks/useTerminalSize.js';
 import type { Project } from '../app.js';
@@ -27,7 +27,9 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
   const [targets, setTargets] = useState<MakeTarget[]>([]);
   const [gitStatus, setGitStatus] = useState<GitStatus | null>(null);
   const [issues, setIssues] = useState<GitHubIssue[]>([]);
-  const [issueCount, setIssueCount] = useState<{ open: number; closed: number }>({ open: 0, closed: 0 });
+  const [prs, setPRs] = useState<GitHubPR[]>([]);
+  const [issueCount, setIssueCount] = useState<number>(0);
+  const [prCount, setPRCount] = useState<number>(0);
   const [loading, setLoading] = useState(true);
   const [selectedTargetIndex, setSelectedTargetIndex] = useState(0);
   const [lazyGitRunning, setLazyGitRunning] = useState(false);
@@ -44,12 +46,21 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
     setTargets(makeTargets);
     setGitStatus(git);
 
-    // Load GitHub issues (don't block on this)
+    // Load GitHub issues and PRs (don't block on this)
     const github = new GitHub(project.path);
-    const issuesResult = await github.listIssues('open', 5);
+    const [issuesResult, prsResult] = await Promise.all([
+      github.listIssues('open', 5),
+      github.listPRs('open', 5),
+    ]);
+
     if (issuesResult.success) {
       setIssues(issuesResult.data);
-      setIssueCount({ open: issuesResult.data.length, closed: 0 });
+      setIssueCount(issuesResult.data.length);
+    }
+
+    if (prsResult.success) {
+      setPRs(prsResult.data);
+      setPRCount(prsResult.data.length);
     }
 
     setLoading(false);
@@ -92,6 +103,13 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
       return;
     }
 
+    if (input === 'p') {
+      // Open PRs in browser
+      const github = new GitHub(project.path);
+      github.openPRsInBrowser();
+      return;
+    }
+
     if (input === 'g') {
       handleLaunchLazyGit();
       return;
@@ -112,8 +130,8 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
     }
   });
 
-  const lineWidth = Math.min(columns - 8, 100);
-  const panelWidth = isWide ? Math.floor((lineWidth - 4) / 2) : lineWidth;
+  const lineWidth = Math.min(columns - 8, 120);
+  const panelWidth = isWide ? Math.floor((lineWidth - 6) / 3) : lineWidth;
 
   if (loading) {
     return (
@@ -226,7 +244,7 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
         >
           <Box marginBottom={1}>
             <Text bold color="white">ISSUES</Text>
-            <Text color="green"> {issueCount.open} open</Text>
+            <Text color="green"> {issueCount} open</Text>
           </Box>
 
           {issues.length === 0 ? (
@@ -249,6 +267,42 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
             <Text color="gray" dimColor>[i] Open browser</Text>
           </Box>
         </Box>
+
+        {/* PRs panel */}
+        <Box
+          flexDirection="column"
+          width={panelWidth}
+          borderStyle="single"
+          borderColor="gray"
+          paddingX={1}
+        >
+          <Box marginBottom={1}>
+            <Text bold color="white">PULL REQUESTS</Text>
+            <Text color="cyan"> {prCount} open</Text>
+          </Box>
+
+          {prs.length === 0 ? (
+            <Text color="gray" dimColor>No open PRs</Text>
+          ) : (
+            <Box flexDirection="column">
+              {prs.slice(0, isLarge ? 5 : 3).map((pr) => (
+                <Box key={pr.number} gap={1}>
+                  <Text color={pr.isDraft ? 'gray' : 'cyan'}>
+                    {pr.isDraft ? '○' : '●'}
+                  </Text>
+                  <Text color="gray" dimColor>#{pr.number}</Text>
+                  <Text wrap="truncate-end">
+                    {pr.title.slice(0, panelWidth - 12)}
+                  </Text>
+                </Box>
+              ))}
+            </Box>
+          )}
+
+          <Box marginTop={1}>
+            <Text color="gray" dimColor>[p] Open browser</Text>
+          </Box>
+        </Box>
       </Box>
 
       {/* Quick actions footer */}
@@ -256,6 +310,7 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
         <Box gap={4}>
           <Text color="cyan" bold>[r] Run</Text>
           <Text color="green" bold>[i] Issues</Text>
+          <Text color="blue" bold>[p] PRs</Text>
           <Text color="magenta" bold>[g] Git (lazygit)</Text>
         </Box>
         <Box marginTop={1}>

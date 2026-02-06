@@ -38,6 +38,20 @@ export interface GitHubRepo {
 
 export type IssueState = 'open' | 'closed' | 'all';
 
+export interface GitHubPR {
+  number: number;
+  title: string;
+  state: 'open' | 'closed' | 'merged';
+  createdAt: string;
+  updatedAt: string;
+  author: string;
+  headBranch: string;
+  baseBranch: string;
+  isDraft: boolean;
+  reviewDecision?: string;
+  url: string;
+}
+
 export interface GitHubError {
   type: 'not_installed' | 'not_authenticated' | 'not_github_repo' | 'network' | 'unknown';
   message: string;
@@ -177,34 +191,108 @@ export class GitHub {
    */
   async getIssueCounts(): Promise<GitHubResult<{ open: number; closed: number }>> {
     try {
-      const [openResult, closedResult] = await Promise.all([
-        execAsync('gh issue list --state open --json number | jq length', { cwd: this.cwd }),
-        execAsync('gh issue list --state closed --limit 1000 --json number | jq length', { cwd: this.cwd }),
+      const openIssues = await this.listIssues('open', 100);
+
+      return {
+        success: true,
+        data: {
+          open: openIssues.success ? openIssues.data.length : 0,
+          closed: 0, // Don't bother counting closed
+        },
+      };
+    } catch (error) {
+      return this.handleError(error);
+    }
+  }
+
+  /**
+   * List pull requests for the repository
+   */
+  async listPRs(state: 'open' | 'closed' | 'all' = 'open', limit = 30): Promise<GitHubResult<GitHubPR[]>> {
+    try {
+      const stateArg = state === 'all' ? '' : `--state ${state}`;
+      const { stdout } = await execAsync(
+        `gh pr list ${stateArg} --limit ${limit} --json number,title,state,createdAt,updatedAt,author,headRefName,baseRefName,isDraft,reviewDecision,url`,
+        { cwd: this.cwd }
+      );
+
+      const prs = JSON.parse(stdout);
+
+      return {
+        success: true,
+        data: prs.map((pr: any) => ({
+          number: pr.number,
+          title: pr.title,
+          state: pr.state.toLowerCase(),
+          createdAt: pr.createdAt,
+          updatedAt: pr.updatedAt,
+          author: pr.author?.login || 'unknown',
+          headBranch: pr.headRefName,
+          baseBranch: pr.baseRefName,
+          isDraft: pr.isDraft || false,
+          reviewDecision: pr.reviewDecision,
+          url: pr.url,
+        })),
+      };
+    } catch (error) {
+      return this.handleError(error);
+    }
+  }
+
+  /**
+   * Get open PR count
+   */
+  async getPRCount(): Promise<GitHubResult<number>> {
+    try {
+      const result = await this.listPRs('open', 100);
+      return {
+        success: true,
+        data: result.success ? result.data.length : 0,
+      };
+    } catch (error) {
+      return this.handleError(error);
+    }
+  }
+
+  /**
+   * Get quick stats for a project (issues + PRs)
+   */
+  async getQuickStats(): Promise<GitHubResult<{ openIssues: number; openPRs: number }>> {
+    try {
+      const [issues, prs] = await Promise.all([
+        this.listIssues('open', 100),
+        this.listPRs('open', 100),
       ]);
 
       return {
         success: true,
         data: {
-          open: parseInt(openResult.stdout.trim(), 10) || 0,
-          closed: parseInt(closedResult.stdout.trim(), 10) || 0,
+          openIssues: issues.success ? issues.data.length : 0,
+          openPRs: prs.success ? prs.data.length : 0,
         },
       };
-    } catch {
-      // Fallback: just count from list
-      try {
-        const openIssues = await this.listIssues('open', 100);
-        const closedIssues = await this.listIssues('closed', 100);
+    } catch (error) {
+      return this.handleError(error);
+    }
+  }
 
-        return {
-          success: true,
-          data: {
-            open: openIssues.success ? openIssues.data.length : 0,
-            closed: closedIssues.success ? closedIssues.data.length : 0,
-          },
-        };
-      } catch (error) {
-        return this.handleError(error);
-      }
+  /**
+   * Get issue counts - simplified
+   */
+  async getIssueCountsLegacy(): Promise<GitHubResult<{ open: number; closed: number }>> {
+    try {
+      const openIssues = await this.listIssues('open', 100);
+      const closedIssues = await this.listIssues('closed', 100);
+
+      return {
+        success: true,
+        data: {
+          open: openIssues.success ? openIssues.data.length : 0,
+          closed: closedIssues.success ? closedIssues.data.length : 0,
+        },
+      };
+    } catch (error) {
+      return this.handleError(error);
     }
   }
 
@@ -363,6 +451,32 @@ export class GitHub {
   async openRepoInBrowser(): Promise<GitHubResult<void>> {
     return new Promise((resolve) => {
       const proc = spawn('gh', ['repo', 'view', '--web'], {
+        cwd: this.cwd,
+        detached: true,
+        stdio: 'ignore',
+      });
+
+      proc.unref();
+
+      proc.on('error', (err) => {
+        resolve({
+          success: false,
+          error: { type: 'unknown', message: err.message }
+        });
+      });
+
+      setTimeout(() => {
+        resolve({ success: true, data: undefined });
+      }, 100);
+    });
+  }
+
+  /**
+   * Open PRs list in browser
+   */
+  async openPRsInBrowser(): Promise<GitHubResult<void>> {
+    return new Promise((resolve) => {
+      const proc = spawn('gh', ['pr', 'list', '--web'], {
         cwd: this.cwd,
         detached: true,
         stdio: 'ignore',
