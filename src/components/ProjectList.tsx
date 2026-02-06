@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Box, Text, useInput } from 'ink';
 import { useTerminalSize } from '../hooks/useTerminalSize.js';
 
@@ -89,6 +89,11 @@ export const ProjectList: React.FC<ProjectListProps> = ({ projects, onSelect }) 
     p.name.toLowerCase().includes(filter.toLowerCase())
   );
 
+  // Reset selection when filter changes to avoid out-of-bounds
+  useEffect(() => {
+    setSelectedIndex(0);
+  }, [filter]);
+
   // Grid layout calculations
   const cardWidth = 24;
   const cardGap = 2;
@@ -110,13 +115,15 @@ export const ProjectList: React.FC<ProjectListProps> = ({ projects, onSelect }) 
       return;
     }
 
+    // Handle search input (but don't block navigation)
     if (isSearching) {
       if (key.backspace || key.delete) {
         setFilter(prev => prev.slice(0, -1));
-      } else if (input && !key.ctrl && !key.meta) {
+        return;
+      } else if (input && !key.ctrl && !key.meta && !key.upArrow && !key.downArrow && !key.leftArrow && !key.rightArrow && !key.return) {
         setFilter(prev => prev + input);
+        return;
       }
-      return;
     }
 
     if (useGridView) {
