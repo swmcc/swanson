@@ -2,11 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { useApp, useInput } from 'ink';
 import { Splash } from './components/Splash.js';
 import { ProjectList } from './components/ProjectList.js';
-import { ProjectView } from './components/ProjectView.js';
+import { ProjectDashboard } from './components/ProjectDashboard.js';
+import { IssuesBrowser } from './components/IssuesBrowser.js';
+import { LogViewer } from './components/LogViewer.js';
 import { processManager } from './lib/process.js';
 import { PROJECTS, ProjectConfig } from './lib/projects.js';
 
-type Screen = 'splash' | 'list' | 'project';
+type Screen = 'splash' | 'list' | 'dashboard' | 'issues' | 'logs';
 
 export interface Project extends ProjectConfig {
   running: number;
@@ -24,6 +26,7 @@ export const App: React.FC = () => {
   const { exit } = useApp();
   const [screen, setScreen] = useState<Screen>('splash');
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
+  const [runCommand, setRunCommand] = useState<string | null>(null);
 
   // Cleanup on exit
   useEffect(() => {
@@ -33,6 +36,7 @@ export const App: React.FC = () => {
   }, []);
 
   useInput((input, key) => {
+    // Global quit from list screen
     if (input === 'q' && screen === 'list') {
       processManager.stopAll().then(() => exit());
     }
@@ -44,24 +48,80 @@ export const App: React.FC = () => {
 
   const handleProjectSelect = (project: Project) => {
     setSelectedProject(project);
-    setScreen('project');
+    setScreen('dashboard');
   };
 
   const handleBack = () => {
-    setScreen('list');
-    setSelectedProject(null);
+    if (screen === 'issues' || screen === 'logs') {
+      setScreen('dashboard');
+      setRunCommand(null);
+    } else {
+      setScreen('list');
+      setSelectedProject(null);
+    }
   };
 
+  const handleRunCommand = (command: string) => {
+    setRunCommand(command);
+    setScreen('logs');
+  };
+
+  const handleOpenIssues = () => {
+    setScreen('issues');
+  };
+
+  const handleLogExit = () => {
+    setRunCommand(null);
+    setScreen('dashboard');
+  };
+
+  // Splash screen
   if (screen === 'splash') {
     return <Splash onComplete={handleSplashComplete} projectCount={projectsWithState.length} />;
   }
 
+  // Project list
   if (screen === 'list') {
     return <ProjectList projects={projectsWithState} onSelect={handleProjectSelect} />;
   }
 
-  if (screen === 'project' && selectedProject) {
-    return <ProjectView project={selectedProject} onBack={handleBack} />;
+  // Project dashboard
+  if (screen === 'dashboard' && selectedProject) {
+    return (
+      <ProjectDashboard
+        project={selectedProject}
+        onBack={handleBack}
+        onRunCommand={handleRunCommand}
+        onOpenIssues={handleOpenIssues}
+      />
+    );
+  }
+
+  // Issues browser
+  if (screen === 'issues' && selectedProject) {
+    return (
+      <IssuesBrowser
+        projectPath={selectedProject.path}
+        projectName={selectedProject.name}
+        projectIcon={selectedProject.icon}
+        projectColor={selectedProject.color}
+        onBack={handleBack}
+      />
+    );
+  }
+
+  // Log viewer (running a command)
+  if (screen === 'logs' && selectedProject && runCommand) {
+    return (
+      <LogViewer
+        projectPath={selectedProject.path}
+        projectName={selectedProject.name}
+        projectIcon={selectedProject.icon}
+        projectColor={selectedProject.color}
+        command={runCommand}
+        onExit={handleLogExit}
+      />
+    );
   }
 
   return null;
