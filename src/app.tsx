@@ -4,11 +4,12 @@ import { Splash } from './components/Splash.js';
 import { ProjectList } from './components/ProjectList.js';
 import { ProjectDashboard } from './components/ProjectDashboard.js';
 import { IssuesBrowser } from './components/IssuesBrowser.js';
+import { DeploymentsBrowser } from './components/DeploymentsBrowser.js';
 import { LogViewer } from './components/LogViewer.js';
 import { processManager } from './lib/process.js';
 import { PROJECTS, ProjectConfig } from './lib/projects.js';
 
-type Screen = 'splash' | 'list' | 'dashboard' | 'issues' | 'logs';
+type Screen = 'splash' | 'list' | 'dashboard' | 'issues' | 'deployments' | 'logs';
 
 export interface Project extends ProjectConfig {
   running: number;
@@ -52,7 +53,7 @@ export const App: React.FC = () => {
   };
 
   const handleBack = () => {
-    if (screen === 'issues' || screen === 'logs') {
+    if (screen === 'issues' || screen === 'logs' || screen === 'deployments') {
       setScreen('dashboard');
       setRunCommand(null);
     } else {
@@ -68,6 +69,10 @@ export const App: React.FC = () => {
 
   const handleOpenIssues = () => {
     setScreen('issues');
+  };
+
+  const handleOpenDeployments = () => {
+    setScreen('deployments');
   };
 
   const handleLogExit = () => {
@@ -93,6 +98,7 @@ export const App: React.FC = () => {
         onBack={handleBack}
         onRunCommand={handleRunCommand}
         onOpenIssues={handleOpenIssues}
+        onOpenDeployments={handleOpenDeployments}
       />
     );
   }
@@ -101,6 +107,19 @@ export const App: React.FC = () => {
   if (screen === 'issues' && selectedProject) {
     return (
       <IssuesBrowser
+        projectPath={selectedProject.path}
+        projectName={selectedProject.name}
+        projectIcon={selectedProject.icon}
+        projectColor={selectedProject.color}
+        onBack={handleBack}
+      />
+    );
+  }
+
+  // Deployments browser
+  if (screen === 'deployments' && selectedProject) {
+    return (
+      <DeploymentsBrowser
         projectPath={selectedProject.path}
         projectName={selectedProject.name}
         projectIcon={selectedProject.icon}

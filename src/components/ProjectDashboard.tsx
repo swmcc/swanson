@@ -4,6 +4,7 @@ import Spinner from 'ink-spinner';
 import { parseMakefile, getTargetDisplayName, MakeTarget } from '../lib/makefile.js';
 import { getGitStatus, GitStatus } from '../lib/git.js';
 import { GitHub, GitHubIssue, GitHubPR } from '../lib/github.js';
+import { Deployments, Deployment, getStatusIndicator } from '../lib/deployments.js';
 import { launchLazyGit, isLazyGitInstalled } from '../lib/lazygit.js';
 import { useTerminalSize } from '../hooks/useTerminalSize.js';
 import type { Project } from '../app.js';
@@ -13,6 +14,7 @@ interface ProjectDashboardProps {
   onBack: () => void;
   onRunCommand: (command: string) => void;
   onOpenIssues: () => void;
+  onOpenDeployments: () => void;
 }
 
 export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
@@ -20,6 +22,7 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
   onBack,
   onRunCommand,
   onOpenIssues,
+  onOpenDeployments,
 }) => {
   const { columns, rows, isLarge, isWide } = useTerminalSize();
   const { exit } = useApp();
@@ -28,6 +31,7 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
   const [gitStatus, setGitStatus] = useState<GitStatus | null>(null);
   const [issues, setIssues] = useState<GitHubIssue[]>([]);
   const [prs, setPRs] = useState<GitHubPR[]>([]);
+  const [deployments, setDeployments] = useState<Deployment[]>([]);
   const [issueCount, setIssueCount] = useState<number>(0);
   const [prCount, setPRCount] = useState<number>(0);
   const [loading, setLoading] = useState(true);
@@ -46,11 +50,13 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
     setTargets(makeTargets);
     setGitStatus(git);
 
-    // Load GitHub issues and PRs (don't block on this)
+    // Load GitHub issues, PRs, and deployments (don't block on this)
     const github = new GitHub(project.path);
-    const [issuesResult, prsResult] = await Promise.all([
+    const deploymentsClient = new Deployments(project.path);
+    const [issuesResult, prsResult, deploymentsResult] = await Promise.all([
       github.listIssues('open', 5),
       github.listPRs('open', 5),
+      deploymentsClient.listDeployments(3),
     ]);
 
     if (issuesResult.success) {
@@ -61,6 +67,10 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
     if (prsResult.success) {
       setPRs(prsResult.data);
       setPRCount(prsResult.data.length);
+    }
+
+    if (deploymentsResult.success) {
+      setDeployments(deploymentsResult.data);
     }
 
     setLoading(false);
@@ -110,6 +120,11 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
       return;
     }
 
+    if (input === 'd') {
+      onOpenDeployments();
+      return;
+    }
+
     if (input === 'g') {
       handleLaunchLazyGit();
       return;
@@ -130,8 +145,8 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
     }
   });
 
-  const lineWidth = Math.min(columns - 8, 120);
-  const panelWidth = isWide ? Math.floor((lineWidth - 6) / 3) : lineWidth;
+  const lineWidth = Math.min(columns - 8, 140);
+  const panelWidth = isWide ? Math.floor((lineWidth - 8) / 4) : lineWidth;
 
   if (loading) {
     return (
@@ -303,6 +318,43 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
             <Text color="gray" dimColor>[p] Open browser</Text>
           </Box>
         </Box>
+
+        {/* Deployments panel */}
+        <Box
+          flexDirection="column"
+          width={panelWidth}
+          borderStyle="single"
+          borderColor="gray"
+          paddingX={1}
+        >
+          <Box marginBottom={1}>
+            <Text bold color="white">DEPLOYMENTS</Text>
+            <Text color="gray" dimColor> ({deployments.length})</Text>
+          </Box>
+
+          {deployments.length === 0 ? (
+            <Text color="gray" dimColor>No deployments</Text>
+          ) : (
+            <Box flexDirection="column">
+              {deployments.slice(0, isLarge ? 5 : 3).map((deployment) => {
+                const { symbol, color } = getStatusIndicator(deployment.status);
+                return (
+                  <Box key={deployment.id} gap={1}>
+                    <Text color={color as any}>{symbol}</Text>
+                    <Text color="magenta">{deployment.shortRef}</Text>
+                    <Text color="gray" dimColor wrap="truncate-end">
+                      {deployment.environment.slice(0, panelWidth - 16)}
+                    </Text>
+                  </Box>
+                );
+              })}
+            </Box>
+          )}
+
+          <Box marginTop={1}>
+            <Text color="gray" dimColor>[d] View all</Text>
+          </Box>
+        </Box>
       </Box>
 
       {/* Quick actions footer */}
@@ -311,7 +363,8 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
           <Text color="cyan" bold>[r] Run</Text>
           <Text color="green" bold>[i] Issues</Text>
           <Text color="blue" bold>[p] PRs</Text>
-          <Text color="magenta" bold>[g] Git (lazygit)</Text>
+          <Text color="yellow" bold>[d] Deploys</Text>
+          <Text color="magenta" bold>[g] Git</Text>
         </Box>
         <Box marginTop={1}>
           <Text color="gray">Path: {project.path}</Text>
