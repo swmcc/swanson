@@ -5,11 +5,12 @@ import { ProjectList } from './components/ProjectList.js';
 import { ProjectDashboard } from './components/ProjectDashboard.js';
 import { IssuesBrowser } from './components/IssuesBrowser.js';
 import { DeploymentsBrowser } from './components/DeploymentsBrowser.js';
+import { DeploymentsOverview } from './components/DeploymentsOverview.js';
 import { LogViewer } from './components/LogViewer.js';
 import { processManager } from './lib/process.js';
 import { PROJECTS, ProjectConfig } from './lib/projects.js';
 
-type Screen = 'splash' | 'list' | 'dashboard' | 'issues' | 'deployments' | 'logs';
+type Screen = 'splash' | 'list' | 'dashboard' | 'issues' | 'deployments' | 'deployments-overview' | 'logs';
 
 export interface Project extends ProjectConfig {
   running: number;
@@ -41,6 +42,10 @@ export const App: React.FC = () => {
     if (input === 'q' && screen === 'list') {
       processManager.stopAll().then(() => exit());
     }
+    // Open deployments overview from list screen
+    if (input === 'd' && screen === 'list') {
+      setScreen('deployments-overview');
+    }
   });
 
   const handleSplashComplete = () => {
@@ -56,6 +61,8 @@ export const App: React.FC = () => {
     if (screen === 'issues' || screen === 'logs' || screen === 'deployments') {
       setScreen('dashboard');
       setRunCommand(null);
+    } else if (screen === 'deployments-overview') {
+      setScreen('list');
     } else {
       setScreen('list');
       setSelectedProject(null);
@@ -88,6 +95,11 @@ export const App: React.FC = () => {
   // Project list
   if (screen === 'list') {
     return <ProjectList projects={projectsWithState} onSelect={handleProjectSelect} />;
+  }
+
+  // Deployments overview (all projects)
+  if (screen === 'deployments-overview') {
+    return <DeploymentsOverview onBack={handleBack} />;
   }
 
   // Project dashboard

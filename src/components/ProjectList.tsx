@@ -237,8 +237,8 @@ export const ProjectList: React.FC<ProjectListProps> = ({ projects, onSelect }) 
       <Box marginTop={isLarge ? 3 : 2} flexDirection="column">
         <Text color="gray">
           {useGridView
-            ? '[←↑↓→] Navigate  [⏎] Select  [/] Search  [q] Quit'
-            : '[↑↓] Navigate  [⏎] Select  [/] Search  [q] Quit'}
+            ? '[←↑↓→] Navigate  [⏎] Select  [/] Search  [d] Deploys  [q] Quit'
+            : '[↑↓] Navigate  [⏎] Select  [/] Search  [d] Deploys  [q] Quit'}
         </Text>
         {isLarge && (
           <Box marginTop={1}>
