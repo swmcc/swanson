@@ -80,6 +80,13 @@ export const PROJECTS: ProjectConfig[] = [
     color: 'cyan',
     description: 'Dev services TUI',
   },
+  {
+    name: 'searchforaproperty',
+    path: '/Users/swm/Code/searchforaproperty',
+    icon: '🏠',
+    color: 'green',
+    description: 'NI property listings',
+  },
 ];
 
 export function getProjectConfig(name: string): ProjectConfig | undefined {
